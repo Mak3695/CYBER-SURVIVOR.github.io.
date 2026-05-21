@@ -93,6 +93,25 @@
             box-shadow: 0 12px 30px rgba(244, 63, 94, 0.4);
         }
 
+        /* Targetes específiques de la botiga */
+        .shop-card {
+            background: rgba(17, 24, 39, 0.95);
+            border: 2px solid #a855f7;
+            border-radius: 10px;
+            padding: 12px;
+            margin: 6px;
+            width: 220px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.15);
+        }
+        .shop-card:hover {
+            transform: translateY(-5px);
+            border-color: #e9d5ff;
+            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.4);
+        }
+
         .btn-primary {
             background: linear-gradient(135deg, #f43f5e, #be123c);
             color: white;
@@ -270,10 +289,16 @@
                 <div class="text-xs text-cyan-400 mt-1">🪙 <span id="hud-scrap">0</span> CHIPS</div>
             </div>
 
-            <div class="text-right pointer-events-auto">
-                <div class="hud-text text-white text-xl font-bold">⏱️ <span id="hud-time">00:00</span></div>
-                <div class="text-xs text-red-400 mt-1 mb-2">💀 ALIENÍGENES: <span id="hud-kills">0</span></div>
-                <button id="btn-abort" class="text-xs bg-slate-800 border border-slate-600 text-gray-400 px-2 py-1 rounded hover:bg-slate-700 hover:text-white transition">Torna a l'Inici</button>
+            <div class="text-right pointer-events-auto flex flex-col items-end gap-2">
+                <div>
+                    <div class="hud-text text-white text-xl font-bold">⏱️ <span id="hud-time">00:00</span></div>
+                    <div class="text-xs text-red-400 mt-1 mb-2">💀 ALIENÍGENES: <span id="hud-kills">0</span></div>
+                </div>
+                <div class="flex gap-2">
+                    <!-- BOTÓ DE BOTIGA -->
+                    <button id="btn-open-shop" class="bg-purple-800 hover:bg-purple-700 text-white font-bold p-2 px-3 rounded border border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.4)] transition text-sm flex items-center gap-1">🛒 BOTIGA (B)</button>
+                    <button id="btn-abort" class="text-xs bg-slate-800 border border-slate-600 text-gray-400 px-2 py-1 rounded hover:bg-slate-700 hover:text-white transition">Torna a l'Inici</button>
+                </div>
             </div>
         </div>
         
@@ -295,10 +320,12 @@
             CYBER-SURVIVOR
         </h1>
         <p class="text-gray-400 mb-8 max-w-xl text-center text-sm md:text-base px-6 leading-relaxed">
-            Arrossega el ratolí o el dit per moure la nau interestel·lar. Les armes funcionen automàticament.<br><br>
+            Fes servir les fletxes del teclat (o WASD), arrossega el ratolí o el dit per moure la nau.<br><br>
             ⚔️ <span class="text-cyan-400">Armes de Sinergia:</span> Blaster, Escuts, Descàrregues de llamps i Mines Spacials.<br>
-            🚀 <span class="text-yellow-400">Atac Manual:</span> Prem qualsevol tecla (o el botó ⚔️) per fer un tall d'energia massiu!<br>
-            👾 <span class="text-red-400">Perill:</span> Caps colossals apareixeran cada cert temps... Cuidado al minut 3:00.<br>
+            🚀 <span class="text-yellow-400">Atac Manual:</span> Prem qualsevol tecla o el botó dret del ratolí per fer un tall massiu!<br>
+            🏪 <span class="text-purple-400">Botiga de Chips:</span> Prem "B" o el botó 🛒 per pausar i comprar habilitats amb els teus Chips!<br>
+            👾 <span class="text-red-400">Escalat Extrem:</span> La densitat d'enemics augmenta un 30% cada 20 segons de supervivència!<br>
+            ⚠️ <span class="text-rose-500 font-bold">Missions de 10 minuts:</span> Sobreviu fins al minut 10:00 per enfrontar-te al temible BOSS PLUS.
         </p>
         
         <!-- NOVA SECCIÓ DE DIFICULTAT -->
@@ -322,6 +349,19 @@
         <div id="upgrades-container" class="flex flex-wrap justify-center max-w-4xl px-4">
             <!-- S'injectaran dinàmicament -->
         </div>
+    </div>
+
+    <!-- INTERFÍCIE DE LA BOTIGA DE CHIPS -->
+    <div id="shop-menu" class="overlay-menu hidden">
+        <h2 class="text-3xl md:text-4xl text-purple-400 font-bold mb-1 text-center tracking-widest" style="text-shadow: 0 0 15px rgba(168,85,247,0.5);">ESTACIÓ DE RECONSTRUCCIÓ</h2>
+        <p class="text-gray-400 mb-4 text-center">Intercanvia Chips de memòria per llicències de combat militar:</p>
+        <div class="mb-6 text-xl text-yellow-300 font-bold bg-slate-900 px-6 py-2 rounded-lg border border-yellow-500 shadow-md">
+            🪙 ELS TEUS CHIPS: <span id="shop-scrap-count">0</span> CHIPS
+        </div>
+        <div id="shop-items-container" class="flex flex-wrap justify-center max-w-4xl px-4 mb-8">
+            <!-- Items de la botiga injectats per JS -->
+        </div>
+        <button id="btn-shop-close" class="btn-primary" style="background: linear-gradient(135deg, #a855f7, #7e22ce); border-color: #d8b4fe; box-shadow: 0 4px 20px rgba(168,85,247,0.4);">Tornar al Combat</button>
     </div>
 
     <!-- Menú d'obertura de Cofre de Cap (Reward Screen) -->
@@ -350,7 +390,7 @@
 </div>
 
 <script>
-// --- MOTOR DE SO RETRO AMB WEB AUDIO API (Sintetització pura sense arxius externs) ---
+// --- MOTOR DE SO RETRO AMB WEB AUDIO API ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playSound(type) {
@@ -501,6 +541,16 @@ function playSound(type) {
     }
 }
 
+// --- UTILITATS D'ESCALAT I MÚLTIPLES ---
+function getCritMultiplier(baseChance) {
+    let mult = 1;
+    let isCrit = false;
+    let chance = baseChance;
+    while(chance >= 1) { mult++; chance--; isCrit = true; }
+    if(Math.random() < chance) { mult++; isCrit = true; }
+    return { mult, isCrit };
+}
+
 // --- CONFIGURACIÓ DE L'ÀREA DE JOC ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -510,9 +560,11 @@ const container = document.getElementById('game-container');
 const uiLayer = document.getElementById('ui-layer');
 const startMenu = document.getElementById('start-menu');
 const levelUpMenu = document.getElementById('level-up-menu');
+const shopMenu = document.getElementById('shop-menu');
 const chestMenu = document.getElementById('chest-menu');
 const gameOverMenu = document.getElementById('game-over-menu');
 const upgradesContainer = document.getElementById('upgrades-container');
+const shopItemsContainer = document.getElementById('shop-items-container');
 const chestRewardsContainer = document.getElementById('chest-rewards-container');
 const weaponsHud = document.getElementById('weapons-hud');
 
@@ -526,6 +578,7 @@ const xpBar = document.getElementById('xp-bar');
 const bossWarning = document.getElementById('boss-warning');
 const bossHpContainer = document.getElementById('boss-hp-container');
 const bossHpBar = document.getElementById('boss-hp-bar');
+const shopScrapCount = document.getElementById('shop-scrap-count');
 
 let width = 0;
 let height = 0;
@@ -540,27 +593,28 @@ function checkResize() {
 }
 
 // --- ESTAT DEL JOC ---
-const STATE = { MENU: 0, PLAYING: 1, LEVEL_UP: 2, GAME_OVER: 3, CHEST: 4 };
+const STATE = { MENU: 0, PLAYING: 1, LEVEL_UP: 2, GAME_OVER: 3, CHEST: 4, SHOP: 5 };
 let currentState = STATE.MENU;
 let lastTime = 0;
 let gameTimer = 0;
 let frameCount = 0;
 let totalKills = 0;
 let totalScrap = 0;
-let screenShake = 0; // Quantitat de tremolor de pantalla (més impacte de dany)
+let screenShake = 0; 
 
 // --- LLISTES DE CONTROL ---
 let player;
 let projectiles = [];
-let enemyProjectiles = []; // Projectils llançats pels Caps d'onades
+let enemyProjectiles = []; 
 let enemies = [];
 let particles = [];
 let xpOrbs = [];
-let scrapMetal = []; // Nova moneda recollible
+let scrapMetal = []; 
 let floatingTexts = [];
-let slashes = []; // Llista d'atacs cos a cos
+let slashes = []; 
 let stars = [];
 let currentBoss = null;
+let keys = {};
 
 // --- CONFIGURACIÓ DE DIFICULTAT ---
 const DIFFICULTIES = {
@@ -571,7 +625,6 @@ const DIFFICULTIES = {
 };
 let currentDifficulty = 'normal';
 
-// Lògica de selecció de dificultat UI
 document.querySelectorAll('.diff-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
         document.querySelectorAll('.diff-btn').forEach(b => {
@@ -583,7 +636,6 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
         target.classList.add('active');
         currentDifficulty = target.getAttribute('data-diff');
         
-        // Efectes visuals únics per la dificultat seleccionada
         const colorMap = {
             'facil': 'rgba(34, 197, 94, 0.5)',
             'normal': 'rgba(59, 130, 246, 0.5)',
@@ -598,11 +650,11 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
         };
         target.style.boxShadow = `0 0 15px ${colorMap[currentDifficulty]}`;
         target.style.backgroundColor = bgMap[currentDifficulty];
-        playSound('shoot'); // Resposta d'àudio al fer clic
+        playSound('shoot'); 
     });
 });
 
-// --- CONFIGURACIÓ DE LES ARMES DE SINERGIA ---
+// --- CONFIGURACIÓ DE LES ARMES ---
 const WEAPONS_DB = {
     blaster: { name: 'Blaster Tàctic', desc: 'Dispara bales d\'energia de recerca ràpida.', icon: '🔫', baseDmg: 40, fireRate: 0.5 },
     shield: { name: 'Escut de Plasma', desc: 'Aura que gira al voltant protegint-te i danyant.', icon: '🛡️', baseDmg: 60, baseCd: 0 },
@@ -610,31 +662,40 @@ const WEAPONS_DB = {
     mines: { name: 'Mina Gravitatòria', desc: 'Allibera mines flotants explosives.', icon: '💣', baseDmg: 160, fireRate: 2.2 }
 };
 
-// --- MILLORES DISPONIBLES AL PUJAR NIVELL (DIVERSITAT EXTREMA DE XASSÍS) ---
+// --- BASE DE DADES DE PRODUCTES DE LA BOTIGA ---
+const SHOP_ITEMS_DB = [
+    { id: 'buy_xp', name: 'Mòdul de Síncro (XP)', desc: 'Adquireix de forma immediata un 40% de l\'experiència del nivell actual.', cost: 35, icon: '🧬' },
+    { id: 'buy_heal', name: 'Reparació d\'Emergència', desc: 'Reconstrueix completament 40 de Salut de forma immediata.', cost: 25, icon: '🔧' },
+    { id: 'buy_melee_cd', name: 'Sobrecàrrega d\'Atac', desc: 'Redueix permanentment el cooldown de la Fulla Melee.', cost: 50, icon: '⚔️' },
+    { id: 'buy_dmg_boost', name: 'Amplificador Quàntic', desc: 'Increment global de dany d\'armes del 15% de forma infinita.', cost: 65, icon: '💥' },
+    { id: 'buy_chips_boost', name: 'Protocol d\'Extracció', desc: 'Augmenta el valor de recollida de monedes en +1 per sempre.', cost: 45, icon: '🪙' }
+];
+
+// --- MILLORES DISPONIBLES AL PUJAR NIVELL (CUMULATIUS SENSE LÍMIT) ---
 const UPGRADES_POOL = [
     { id: 'weapon_blaster', name: 'Blaster d\'Ió', desc: 'Aconsegueix o millora l\'arma Blaster.', icon: '🔫' },
     { id: 'weapon_shield', name: 'Escut de Plasma', desc: 'Aconsegueix o millora l\'Escut Orbital.', icon: '🛡️' },
     { id: 'weapon_lightning', name: 'Generador de Llampecs', desc: 'Aconsegueix o millora el canó de Llampecs.', icon: '⚡' },
     { id: 'weapon_mines', name: 'Mines Còsmiques', desc: 'Aconsegueix o millora les mines gravitacionals.', icon: '💣' },
     
-    { id: 'passive_magnet', name: 'Super Conductors', desc: 'Atreu experiència de molt més lluny (+30% radi).', icon: '🧲' },
-    { id: 'passive_armor', name: 'Superxassís blindat', desc: 'Redueix tout el dany rebut en un 15%.', icon: '🧱' },
+    { id: 'passive_magnet', name: 'Super Conductors', desc: 'Atreu experiència de molt més lluny.', icon: '🧲' },
+    { id: 'passive_armor', name: 'Superxassís blindat', desc: 'Afegeix +15 d\'armadura permanentment.', icon: '🧱' },
     { id: 'passive_growth', name: 'Intel·ligència Síncrona', desc: 'Guanya un 20% més d\'experiència (XP).', icon: '🧬' },
     { id: 'heal', name: 'Kit de Nano-reparació', desc: 'Restaura immediatament 50 de Salut.', icon: '🔧' },
 
     { id: 'passive_speed', name: 'Turbines d\'Hiper-Impuls', desc: 'Augmenta un 15% la velocitat de moviment de la nau.', icon: '🚀' },
-    { id: 'passive_crit', name: 'Lents de Focalització', desc: 'Afegeix +15% de probabilitat de dany crític (x2 de dany).', icon: '🎯' },
-    { id: 'passive_regen', name: 'Nano-Regeneració Activa', desc: 'El xassís es repara automàticament +1 HP cada 2 segons.', icon: '🩹' },
-    { id: 'passive_bullet_speed', name: 'Accelerador de Projectils', desc: 'La velocitat dels teus projectils augmenta un 25%.', icon: '☄️' },
-    { id: 'passive_bullet_size', name: 'Calibre Sideral', desc: 'Els projectils augmenten un 30% de mida i dany.', icon: '🔮' },
-    { id: 'passive_dodge', name: 'Deflector Quàntic', desc: 'Afegeix +10% de probabilitat de dany d\'esquivar.', icon: '🌀' },
-    { id: 'passive_boss_killer', name: 'Algoritme de Desmuntatge', desc: 'Fes un 35% d\'impacte extra exclusivament contra Caps.', icon: '👾' },
-    { id: 'passive_scrap_bonus', name: 'Sonda Recicladora', desc: 'Augmenta la quantitat de monedes (Chips) aconseguides (+1).', icon: '🪙' },
-    { id: 'passive_knockback', name: 'Repulsors Gravitatoris', desc: 'Els teus projectils empenyen els enemics enrere amb força.', icon: '💨' },
-    { id: 'passive_fire_trail', name: 'Combustió de Propulsor', desc: 'Deixa un rastre de foc termonuclear que crema els aliens.', icon: '🔥' },
-    { id: 'passive_shockwave', name: 'Ona de Retorn Reactiu', desc: 'Allibera una ona expansiva de foc al rebre danys.', icon: '💥' },
-    { id: 'passive_freeze', name: 'Criocristalització', desc: 'Afegeix 15% de probabilitat de congelar (alentir 50%) enemics.', icon: '❄️' },
-    { id: 'passive_vampirism', name: 'Absorció de Biomassa', desc: 'Cada 10 aliens destruïts recuperes 1 HP de vida.', icon: '🩸' }
+    { id: 'passive_crit', name: 'Lents de Focalització', desc: 'Afegeix probabilitat de dany crític exponencial.', icon: '🎯' },
+    { id: 'passive_regen', name: 'Nano-Regeneració Activa', desc: 'El xassís es repara automàticament pas a pas.', icon: '🩹' },
+    { id: 'passive_bullet_speed', name: 'Accelerador de Projectils', desc: 'La velocitat dels teus projectils augmenta exponencial.', icon: '☄️' },
+    { id: 'passive_bullet_size', name: 'Calibre Sideral', desc: 'Els projectils augmenten la seva mida.', icon: '🔮' },
+    { id: 'passive_dodge', name: 'Deflector Quàntic', desc: 'Afegeix +10% de probabilitat de dany d\'esquivar infinit.', icon: '🌀' },
+    { id: 'passive_boss_killer', name: 'Algoritme de Desmuntatge', desc: 'Fes més d\'impacte extra exclusivament contra Caps.', icon: '👾' },
+    { id: 'passive_scrap_bonus', name: 'Sonda Recicladora', desc: 'Augmenta la quantitat de monedes aconseguides (+1).', icon: '🪙' },
+    { id: 'passive_knockback', name: 'Repulsors Gravitatoris', desc: 'Els teus projectils empenyen els enemics enrere.', icon: '💨' },
+    { id: 'passive_fire_trail', name: 'Combustió de Propulsor', desc: 'Deixa un rastre de foc termonuclear de poder infinit.', icon: '🔥' },
+    { id: 'passive_shockwave', name: 'Ona de Retorn Reactiu', desc: 'Afegeix o augmenta el dany de l\'Ona al rebre danys.', icon: '💥' },
+    { id: 'passive_freeze', name: 'Criocristalització', desc: 'Afegeix probabilitat de congelar enemics de forma acumulativa.', icon: '❄️' },
+    { id: 'passive_vampirism', name: 'Absorció de Biomassa', desc: 'Més cura biològica permanent per matar aliens.', icon: '🩸' }
 ];
 
 // --- CLASSES DEL MOTOR ---
@@ -652,21 +713,21 @@ class Player {
         this.xp = 0;
         this.xpNeeded = 12;
         
-        // Habilitat Cos a Cos MANUAL
         this.meleeCooldown = 5.0;
-        this.meleeTimer = 0.0; // Comença carregada
+        this.meleeTimer = 0.0; 
         this.meleeRange = 120;
         this.meleeDamage = 350; 
         
         this.targetX = this.x;
         this.targetY = this.y;
         this.isMoving = false;
+        this.isKeyboardMoving = false;
         
         this.color = '#0ea5e9';
         this.angle = -Math.PI / 2;
 
         this.weapons = { blaster: 1, shield: 0, lightning: 0, mines: 0 };
-        this.passives = { magnet: 80, armor: 0, growth: 1.0, dodgeChance: 0.0, hasShockwave: false };
+        this.passives = { magnet: 80, armor: 0, growth: 1.0, dodgeChance: 0.0, shockwaveLevel: 0 };
 
         this.critChance = 0.05;
         this.regenLevel = 0;
@@ -684,11 +745,36 @@ class Player {
 
         this.timers = { blaster: 0, lightning: 0, mines: 0 };
         this.shieldAngle = 0;
+
+        this.shopDamageMult = 1.0;
     }
 
     update(dt) {
-        // Moviment
-        if (this.isMoving) {
+        // --- MOVIMENT AMB TECLAT ---
+        let kx = 0;
+        let ky = 0;
+        if (keys['ArrowUp'] || keys['KeyW']) ky -= 1;
+        if (keys['ArrowDown'] || keys['KeyS']) ky += 1;
+        if (keys['ArrowLeft'] || keys['KeyA']) kx -= 1;
+        if (keys['ArrowRight'] || keys['KeyD']) kx += 1;
+
+        this.isKeyboardMoving = (kx !== 0 || ky !== 0);
+
+        if (this.isKeyboardMoving) {
+            let len = Math.hypot(kx, ky);
+            kx /= len;
+            ky /= len;
+
+            this.angle = Math.atan2(ky, kx);
+            this.x += kx * this.speed * dt;
+            this.y += ky * this.speed * dt;
+            
+            this.targetX = this.x;
+            this.targetY = this.y;
+            this.isMoving = false; 
+        } 
+        // --- MOVIMENT AMB RATOLÍ/TÀCTIL ---
+        else if (this.isMoving) {
             const dx = this.targetX - this.x;
             const dy = this.targetY - this.y;
             const dist = Math.hypot(dx, dy);
@@ -718,7 +804,7 @@ class Player {
             }
         }
 
-        if (this.fireTrailLevel > 0 && this.isMoving) {
+        if (this.fireTrailLevel > 0 && (this.isMoving || this.isKeyboardMoving)) {
             this.fireTrailTimer += dt;
             if (this.fireTrailTimer >= 0.15) {
                 particles.push(new FireTrailSegment(this.x, this.y, 75 * this.fireTrailLevel, 1.6));
@@ -730,7 +816,6 @@ class Player {
             this.shieldAngle += 2.2 * dt;
         }
 
-        // Atac Cos a Cos Timer
         if (this.meleeTimer > 0) {
             this.meleeTimer -= dt;
         }
@@ -747,8 +832,8 @@ class Player {
 
     tryMelee() {
         if (this.meleeTimer <= 0) {
-            this.fireMelee();
             this.meleeTimer = this.meleeCooldown;
+            this.fireMelee();
         }
     }
 
@@ -775,7 +860,7 @@ class Player {
             const count = 1 + Math.floor(this.weapons.blaster / 3);
             const spread = 0.15;
             const startAngle = angle - (spread * (count - 1)) / 2;
-            const dmg = WEAPONS_DB.blaster.baseDmg * (1 + (this.weapons.blaster - 1) * 0.15);
+            const dmg = WEAPONS_DB.blaster.baseDmg * (1 + (this.weapons.blaster - 1) * 0.15) * this.shopDamageMult;
 
             for (let i = 0; i < count; i++) {
                 projectiles.push(new Projectile(this.x, this.y, startAngle + (spread * i), dmg, 1 + Math.floor(this.weapons.blaster/5)));
@@ -787,14 +872,14 @@ class Player {
 
     fireLightning() {
         const count = Math.min(enemies.length, this.weapons.lightning);
-        const dmg = WEAPONS_DB.lightning.baseDmg * (1 + (this.weapons.lightning - 1) * 0.2);
+        const dmg = WEAPONS_DB.lightning.baseDmg * (1 + (this.weapons.lightning - 1) * 0.2) * this.shopDamageMult;
         
         let shuffled = [...enemies].sort(() => 0.5 - Math.random());
         for (let i = 0; i < count; i++) {
             let target = shuffled[i];
             if (target) {
-                let isCrit = Math.random() < this.critChance;
-                let finalDmg = isCrit ? dmg * 2 : dmg;
+                let { mult, isCrit } = getCritMultiplier(this.critChance);
+                let finalDmg = dmg * mult;
                 target.takeDamage(finalDmg, isCrit);
                 particles.push(new LightningBeam(this.x, this.y, target.x, target.y));
                 playSound('lightning');
@@ -804,7 +889,7 @@ class Player {
     }
 
     fireMines() {
-        const dmg = WEAPONS_DB.mines.baseDmg * (1 + (this.weapons.mines - 1) * 0.25);
+        const dmg = WEAPONS_DB.mines.baseDmg * (1 + (this.weapons.mines - 1) * 0.25) * this.shopDamageMult;
         const radius = 60 + this.weapons.mines * 10;
         const angle = this.angle + Math.PI + (Math.random()*0.5 - 0.25);
         const spawnX = this.x + Math.cos(angle) * 30;
@@ -820,7 +905,7 @@ class Player {
         let slashAngle = this.angle;
         if (target) slashAngle = Math.atan2(target.y - this.y, target.x - this.x);
         
-        let dmg = this.meleeDamage;
+        let dmg = this.meleeDamage * this.shopDamageMult;
         if (this.bossDamageMult > 1.0) dmg *= this.bossDamageMult;
         
         slashes.push(new EnergySlash(this.x, this.y, slashAngle, this.meleeRange, dmg));
@@ -842,9 +927,10 @@ class Player {
     }
 
     draw() {
+        // Escuts orbitals (Ilimitats)
         if (this.weapons.shield > 0) {
-            const numShields = Math.min(4, 1 + Math.floor(this.weapons.shield / 2));
-            const dmg = WEAPONS_DB.shield.baseDmg * (1 + (this.weapons.shield - 1) * 0.15);
+            const numShields = 1 + Math.floor(this.weapons.shield / 2); // SENSE LÍMIT
+            const dmg = WEAPONS_DB.shield.baseDmg * (1 + (this.weapons.shield - 1) * 0.15) * this.shopDamageMult;
             const orbitRadius = 60 + this.weapons.shield * 4;
 
             for (let i = 0; i < numShields; i++) {
@@ -896,14 +982,13 @@ class Player {
         ctx.fillStyle = '#ffffff';
         ctx.fill();
         
-        // Indicador circular de recàrrega per l'habilitat Cos a Cos
         ctx.beginPath();
         ctx.arc(0, 0, this.radius + 8, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * (1 - Math.max(0, this.meleeTimer) / this.meleeCooldown)));
         ctx.strokeStyle = 'rgba(250, 204, 21, 0.7)';
         ctx.lineWidth = 3;
         ctx.stroke();
         
-        if (this.isMoving) {
+        if (this.isMoving || this.isKeyboardMoving) {
             ctx.beginPath();
             ctx.moveTo(-this.radius * 0.5, -4);
             ctx.lineTo(-this.radius * 1.5 - Math.random() * 8, 0);
@@ -921,19 +1006,26 @@ class Player {
             return;
         }
 
-        const finalDamage = amount * (1 - this.passives.armor / 100);
+        const finalDamage = amount * Math.max(0, 1 - this.passives.armor / 100);
         this.hp -= finalDamage;
         hudHp.innerText = Math.max(0, Math.floor(this.hp));
-        playSound('hit');
-        spawnParticles(this.x, this.y, '#f43f5e', 14, 0.35);
-        screenShake = 12;
+        
+        if (finalDamage > 0) {
+            playSound('hit');
+            spawnParticles(this.x, this.y, '#f43f5e', 14, 0.35);
+            screenShake = 12;
+        }
 
-        if (this.passives.hasShockwave) {
+        // Shockwave acumula el dany per nivells
+        if (this.passives.shockwaveLevel > 0) {
             playSound('explosion');
-            spawnExplosionEffect(this.x, this.y, 110);
+            const swRadius = 110 + (this.passives.shockwaveLevel * 10);
+            spawnExplosionEffect(this.x, this.y, swRadius);
             const allTargets = currentBoss ? [currentBoss, ...enemies] : enemies;
             allTargets.forEach(e => {
-                if (Math.hypot(e.x - this.x, e.y - this.y) < 130) e.takeDamage(80); 
+                if (Math.hypot(e.x - this.x, e.y - this.y) < swRadius + 20) {
+                    e.takeDamage(80 * this.shopDamageMult * this.passives.shockwaveLevel); 
+                }
             });
         }
 
@@ -1006,7 +1098,7 @@ class Player {
             if (this.weapons[wKey] === 1) this.timers[wKey] = 0.1;
         } 
         else if (id === 'passive_magnet') this.passives.magnet *= 1.35;
-        else if (id === 'passive_armor') this.passives.armor = Math.min(60, this.passives.armor + 15);
+        else if (id === 'passive_armor') this.passives.armor += 15;
         else if (id === 'passive_growth') this.passives.growth += 0.20;
         else if (id === 'heal') this.hp = Math.min(this.maxHp, this.hp + 50);
         else if (id === 'passive_speed') this.speed *= 1.15;
@@ -1014,12 +1106,12 @@ class Player {
         else if (id === 'passive_regen') this.regenLevel++;
         else if (id === 'passive_bullet_speed') this.bulletSpeedMult += 0.25;
         else if (id === 'passive_bullet_size') this.bulletSizeMult += 0.30;
-        else if (id === 'passive_dodge') this.passives.dodgeChance = Math.min(0.50, this.passives.dodgeChance + 0.10);
+        else if (id === 'passive_dodge') this.passives.dodgeChance += 0.10;
         else if (id === 'passive_boss_killer') this.bossDamageMult += 0.35;
         else if (id === 'passive_scrap_bonus') this.scrapMultiplier += 1;
         else if (id === 'passive_knockback') this.knockbackPower += 6;
         else if (id === 'passive_fire_trail') this.fireTrailLevel++;
-        else if (id === 'passive_shockwave') this.passives.hasShockwave = true;
+        else if (id === 'passive_shockwave') this.passives.shockwaveLevel++;
         else if (id === 'passive_freeze') this.freezeChance += 0.15;
         else if (id === 'passive_vampirism') this.vampireLevel++;
 
@@ -1095,9 +1187,13 @@ class EnergySlash {
                     while (diff < -Math.PI) diff += Math.PI * 2;
                     while (diff > Math.PI) diff -= Math.PI * 2;
                     
-                    if (Math.abs(diff) < Math.PI / 1.5) { // 240 graus
-                        let isCrit = player ? Math.random() < player.critChance : false;
-                        let finalDmg = isCrit ? this.damage * 2 : this.damage;
+                    if (Math.abs(diff) < Math.PI / 1.5) { 
+                        let mult = 1, isCrit = false;
+                        if (player) {
+                            let res = getCritMultiplier(player.critChance);
+                            mult = res.mult; isCrit = res.isCrit;
+                        }
+                        let finalDmg = this.damage * mult;
                         e.takeDamage(finalDmg, isCrit);
                         screenShake = Math.max(screenShake, 8);
                     }
@@ -1374,9 +1470,12 @@ class Enemy {
             }
         }
 
-        if (player && player.freezeChance > 0 && Math.random() < player.freezeChance) {
-            this.frozenTimer = 2.8;
-            spawnParticles(this.x, this.y, '#38bdf8', 3, 0.25);
+        if (player && player.freezeChance > 0) {
+            let fp = player.freezeChance;
+            if (fp >= 1 || Math.random() < fp) {
+                this.frozenTimer = 2.8 * Math.max(1, fp);
+                spawnParticles(this.x, this.y, '#38bdf8', 3, 0.25);
+            }
         }
 
         const textColor = isCrit ? '#facc15' : '#ffffff';
@@ -1392,12 +1491,13 @@ class Enemy {
             spawnParticles(this.x, this.y, this.color, 14, 0.4);
             
             if (player && player.vampireLevel > 0) {
-                player.vampireCounter++;
-                if (player.vampireCounter >= Math.max(4, 15 - player.vampireLevel * 2)) {
-                    player.hp = Math.min(player.maxHp, player.hp + 1);
+                player.vampireCounter += player.vampireLevel;
+                if (player.vampireCounter >= 15) {
+                    let heals = Math.floor(player.vampireCounter / 15);
+                    player.hp = Math.min(player.maxHp, player.hp + heals);
                     hudHp.innerText = Math.floor(player.hp);
-                    player.vampireCounter = 0;
-                    floatingTexts.push(new FloatingText(player.x, player.y - 20, "+1 HP 🧬", "#4ade80"));
+                    player.vampireCounter %= 15;
+                    floatingTexts.push(new FloatingText(player.x, player.y - 20, `+${heals} HP 🧬`, "#4ade80"));
                 }
             }
 
@@ -1410,7 +1510,7 @@ class Enemy {
     }
 }
 
-// --- CAP ALPHA (NORMAL) ---
+// --- CAP ALPHA (NORMAL - 1 MINUT) ---
 class BossAlpha {
     constructor() {
         this.x = width / 2;
@@ -1564,13 +1664,13 @@ class BossOmega {
         const diffConf = DIFFICULTIES[currentDifficulty];
         
         this.speed = 65 * (diffConf.spawnMod >= 1.5 ? 1.25 : 1.0);
-        this.hp = (1500 + (player.level * 300)) * diffConf.hpMod; // Molta més vida!
+        this.hp = (1500 + (player.level * 300)) * diffConf.hpMod; 
         this.maxHp = this.hp;
         this.damage = 50 * diffConf.dmgMod;
-        this.color = '#a855f7'; // Porpra profund
+        this.color = '#a855f7'; 
         this.dead = false;
 
-        this.attackTimer = 1.5; // Ataca més sovint
+        this.attackTimer = 1.5; 
         this.patternStep = 0;
         this.rotationOffset = 0;
     }
@@ -1608,14 +1708,13 @@ class BossOmega {
         const isHard = diffConf.spawnMod >= 1.5;
 
         if (this.patternStep === 0) {
-            // Patró 1: Creu rotatòria contínua
             let currentAngle = this.rotationOffset || 0;
             let spiralInterval = setInterval(() => {
                 if (currentState !== STATE.PLAYING || !currentBoss || currentBoss !== this) {
                     clearInterval(spiralInterval);
                     return;
                 }
-                for(let i=0; i<4; i++) { // 4 direccions base
+                for(let i=0; i<4; i++) { 
                     enemyProjectiles.push(new EnemyProjectile(this.x, this.y, currentAngle + i*(Math.PI/2), 200, 7, 15 * dmgMod, '#a855f7'));
                     if (isHard) enemyProjectiles.push(new EnemyProjectile(this.x, this.y, currentAngle + i*(Math.PI/2) + 0.2, 200, 7, 15 * dmgMod, '#c084fc'));
                 }
@@ -1627,7 +1726,6 @@ class BossOmega {
             this.attackTimer = 3.0;
         } 
         else if (this.patternStep === 1) {
-            // Patró 2: Esclat d'escopeta repetit
             let burstCount = 0;
             let burstInterval = setInterval(() => {
                 if (currentState !== STATE.PLAYING || !currentBoss || currentBoss !== this) {
@@ -1645,14 +1743,11 @@ class BossOmega {
             this.attackTimer = 2.5;
         } 
         else if (this.patternStep === 2) {
-            // Patró 3: Nova Ring (Bales lents seguides per ràpides per atrapar)
             const bulletsCount = isHard ? 30 : 20; 
             const step = (Math.PI * 2) / bulletsCount;
-            // Bales lents
             for (let i = 0; i < bulletsCount; i++) {
                 enemyProjectiles.push(new EnemyProjectile(this.x, this.y, i * step, 100, 9, 20 * dmgMod, '#f43f5e'));
             }
-            // Bales ràpides al mig d'aquí un instant
             setTimeout(() => {
                 if (currentState !== STATE.PLAYING || !currentBoss || currentBoss !== this) return;
                 for (let i = 0; i < bulletsCount; i++) {
@@ -1667,7 +1762,6 @@ class BossOmega {
         ctx.save();
         ctx.translate(this.x, this.y);
         
-        // Hexàgon per OMEGA
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {
             ctx.lineTo(this.radius * Math.cos(i * Math.PI / 3), this.radius * Math.sin(i * Math.PI / 3));
@@ -1710,11 +1804,155 @@ class BossOmega {
             bossHpContainer.classList.add('hidden');
             
             playSound('explosion');
-            spawnExplosionEffect(this.x, this.y, 220); // Més gran
+            spawnExplosionEffect(this.x, this.y, 220); 
             screenShake = 30; 
 
-            // Cofre especial massiu
             openBossChest(100);
+        }
+    }
+}
+
+// --- CAP PLUS (EXTREM CADA 10 MINUTS) ---
+class BossPlus {
+    constructor() {
+        this.x = width / 2;
+        this.y = -80; 
+        this.radius = 70; 
+        
+        const diffConf = DIFFICULTIES[currentDifficulty];
+        
+        this.speed = 70 * (diffConf.spawnMod >= 1.5 ? 1.3 : 1.0);
+        this.hp = (4000 + (player.level * 600)) * diffConf.hpMod; 
+        this.maxHp = this.hp;
+        this.damage = 80 * diffConf.dmgMod;
+        this.color = '#facc15'; 
+        this.dead = false;
+
+        this.attackTimer = 1.0; 
+        this.patternStep = 0;
+        this.rotationOffset = 0;
+    }
+
+    update(dt) {
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist > 300) {
+            this.x += (dx / dist) * this.speed * dt;
+            this.y += (dy / dist) * this.speed * dt;
+        } else if (dist < 200) {
+            this.x -= (dx / dist) * this.speed * 0.8 * dt;
+            this.y -= (dy / dist) * this.speed * 0.8 * dt;
+        }
+
+        this.attackTimer -= dt;
+        if (this.attackTimer <= 0) {
+            this.executeBulletHell();
+        }
+
+        if (dist < this.radius + player.radius) {
+            player.takeDamage(this.damage);
+            player.x -= (dx / dist) * 150; 
+            player.y -= (dy / dist) * 150;
+        }
+    }
+
+    executeBulletHell() {
+        this.patternStep = (this.patternStep + 1) % 3;
+        
+        const diffConf = DIFFICULTIES[currentDifficulty];
+        const dmgMod = diffConf.dmgMod;
+
+        if (this.patternStep === 0) {
+            let currentAngle = this.rotationOffset || 0;
+            let spiralInterval = setInterval(() => {
+                if (currentState !== STATE.PLAYING || !currentBoss || currentBoss !== this) {
+                    clearInterval(spiralInterval); return;
+                }
+                for(let i=0; i<8; i++) { 
+                    enemyProjectiles.push(new EnemyProjectile(this.x, this.y, currentAngle + i*(Math.PI/4), 220, 8, 20 * dmgMod, '#facc15'));
+                }
+                currentAngle += 0.15; 
+            }, 100);
+
+            setTimeout(() => clearInterval(spiralInterval), 2000);
+            this.rotationOffset = currentAngle;
+            this.attackTimer = 2.5;
+        } 
+        else if (this.patternStep === 1) {
+            const bulletsCount = 40; 
+            const step = (Math.PI * 2) / bulletsCount;
+            for (let i = 0; i < bulletsCount; i++) {
+                enemyProjectiles.push(new EnemyProjectile(this.x, this.y, i * step, 300, 7, 25 * dmgMod, '#ef4444'));
+            }
+            this.attackTimer = 1.5;
+        } 
+        else if (this.patternStep === 2) {
+            let gatlingCount = 0;
+            let gatlingInterval = setInterval(() => {
+                if (currentState !== STATE.PLAYING || !currentBoss || currentBoss !== this) {
+                    clearInterval(gatlingInterval); return;
+                }
+                const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                enemyProjectiles.push(new EnemyProjectile(this.x, this.y, angle + (Math.random()*0.1-0.05), 450, 6, 18 * dmgMod, '#ffffff'));
+                gatlingCount++;
+                if(gatlingCount >= 25) clearInterval(gatlingInterval);
+            }, 60);
+            this.attackTimer = 2.5;
+        }
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            ctx.lineTo(this.radius * Math.cos(i * Math.PI / 4), this.radius * Math.sin(i * Math.PI / 4));
+        }
+        ctx.closePath();
+        
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 40;
+        ctx.shadowColor = '#facc15';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 25, 0, Math.PI * 2);
+        ctx.fillStyle = '#7f1d1d';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    takeDamage(amount, isCrit = false) {
+        this.hp -= amount;
+        
+        const textColor = isCrit ? '#ffffff' : '#facc15';
+        const label = isCrit ? `🔥 SUPER CRIT! ${Math.floor(amount)}` : Math.floor(amount);
+        floatingTexts.push(new FloatingText(this.x, this.y - 50, label, textColor));
+        spawnParticles(this.x, this.y, this.color, isCrit ? 15 : 8, 0.3);
+
+        const hpPercent = (this.hp / this.maxHp) * 100;
+        bossHpBar.style.width = `${Math.max(0, hpPercent)}%`;
+
+        if (this.hp <= 0) {
+            this.dead = true;
+            currentBoss = null; 
+            bossWarning.classList.add('hidden');
+            bossHpContainer.classList.add('hidden');
+            
+            playSound('explosion');
+            spawnExplosionEffect(this.x, this.y, 400); 
+            screenShake = 50; 
+
+            openBossChest(250); 
         }
     }
 }
@@ -1854,6 +2092,8 @@ function spawnExplosionEffect(x, y, maxRadius) {
     }
 }
 
+// --- SPAWN DINÀMIC D'ENEMICS ---
+
 function spawnEnemy() {
     const diffConf = DIFFICULTIES[currentDifficulty];
     
@@ -1861,7 +2101,10 @@ function spawnEnemy() {
     const hpMult = baseHpMult * diffConf.hpMod;
     
     const baseCount = Math.floor(Math.random() * (1 + (gameTimer/120)*0.3)) + 1;
-    const count = Math.min(5, Math.ceil(baseCount * diffConf.spawnMod));
+
+    const densityMultiplier = Math.pow(1.30, Math.floor(gameTimer / 20));
+    const baseLimit = 5 * densityMultiplier;
+    const count = Math.min(Math.ceil(baseLimit), Math.ceil(baseCount * diffConf.spawnMod * densityMultiplier));
 
     if (currentBoss) return;
 
@@ -1922,7 +2165,29 @@ function spawnSpecialBoss() {
     }, 3000);
 }
 
-// --- PANTALLA ESPECIAL DE COFRE DE CAP (RECONEIXEMENT DIGITAL) ---
+function spawnPlusBoss() {
+    playSound('warning');
+    bossWarning.innerText = "☠️ ADVERTIMENT CRÍTIC: DESTRUCTOR PLUS ☠️";
+    bossWarning.style.borderColor = "#facc15";
+    bossWarning.style.background = "rgba(185, 28, 28, 0.95)";
+    bossWarning.classList.remove('hidden');
+
+    enemies = [];
+    enemyProjectiles = [];
+
+    setTimeout(() => {
+        bossWarning.classList.add('hidden');
+        currentBoss = new BossPlus();
+        
+        bossHpContainer.classList.remove('hidden');
+        bossHpBar.style.width = '100%';
+        bossHpBar.style.background = 'linear-gradient(90deg, #facc15, #b91c1c)';
+        bossHpBar.style.boxShadow = '0 0 20px #facc15';
+        bossHpContainer.querySelector('div.absolute').innerText = "DESTRUCTOR PLUS";
+    }, 4000);
+}
+
+// --- PANTALLA ESPECIAL DE COFRE DE CAP ---
 
 function openBossChest(scrapReward) {
     currentState = STATE.CHEST;
@@ -1960,13 +2225,108 @@ document.getElementById('btn-chest-claim').onclick = () => {
     lastTime = performance.now();
 };
 
+// --- INTERFÍCIE I COMPRES DE LA BOTIGA INTERACTIVA ---
+
+function openShop() {
+    if (currentState !== STATE.PLAYING) return;
+    
+    currentState = STATE.SHOP;
+    uiLayer.classList.add('hidden');
+    shopMenu.classList.remove('hidden');
+    
+    renderShopItems();
+}
+
+function closeShop() {
+    if (currentState !== STATE.SHOP) return;
+    
+    shopMenu.classList.add('hidden');
+    uiLayer.classList.remove('hidden');
+    currentState = STATE.PLAYING;
+    lastTime = performance.now(); 
+}
+
+function renderShopItems() {
+    shopScrapCount.innerText = totalScrap;
+    shopItemsContainer.innerHTML = '';
+    
+    SHOP_ITEMS_DB.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'shop-card flex flex-col justify-between';
+        
+        const canAfford = totalScrap >= item.cost;
+        const opacityClass = canAfford ? 'opacity-100' : 'opacity-60';
+        
+        card.innerHTML = `
+            <div class="${opacityClass}">
+                <div class="text-3xl mb-2">${item.icon}</div>
+                <h3 class="text-md font-bold text-purple-300 mb-1 leading-tight">${item.name}</h3>
+                <p class="text-xs text-gray-400 mb-3 leading-snug">${item.desc}</p>
+            </div>
+            <div class="mt-auto">
+                <button class="w-full py-1.5 px-3 rounded font-bold text-xs transition ${canAfford ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-slate-800 text-gray-500 cursor-not-allowed'}" ${canAfford ? '' : 'disabled'}>
+                    ${item.cost} COINS 🪙
+                </button>
+            </div>
+        `;
+        
+        if (canAfford) {
+            card.querySelector('button').onclick = (e) => {
+                e.stopPropagation();
+                buyShopItem(item.id, item.cost);
+            };
+        }
+        
+        shopItemsContainer.appendChild(card);
+    });
+}
+
+function buyShopItem(id, cost) {
+    if (totalScrap < cost) return;
+    
+    totalScrap -= cost;
+    playSound('levelup'); 
+    
+    switch (id) {
+        case 'buy_xp':
+            player.gainXp(Math.ceil(player.xpNeeded * 0.40));
+            break;
+        case 'buy_heal':
+            player.hp = Math.min(player.maxHp, player.hp + 40);
+            hudHp.innerText = Math.floor(player.hp);
+            break;
+        case 'buy_melee_cd':
+            player.meleeCooldown *= 0.90;
+            floatingTexts.push(new FloatingText(player.x, player.y - 30, "MELEE OVERLOAD! ⚡", "#fbbf24"));
+            break;
+        case 'buy_dmg_boost':
+            player.shopDamageMult *= 1.15;
+            floatingTexts.push(new FloatingText(player.x, player.y - 30, "+15% ARMS BOOST! 💥", "#a855f7"));
+            break;
+        case 'buy_chips_boost':
+            player.scrapMultiplier += 1;
+            floatingTexts.push(new FloatingText(player.x, player.y - 30, "SCRAP SONDA ENHANCED! 🪙", "#38bdf8"));
+            break;
+    }
+    
+    hudScrap.innerText = totalScrap;
+    renderShopItems(); 
+}
+
+document.getElementById('btn-open-shop').onclick = (e) => {
+    e.stopPropagation();
+    openShop();
+};
+document.getElementById('btn-shop-close').onclick = closeShop;
+
+
 function formatTime(secs) {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
     const s = Math.floor(secs % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
 }
 
-// --- VISUALITZACIÓ DE L'INVENTARI EN EL HUD (Wep icons) ---
+// --- VISUALITZACIÓ DE L'INVENTARI EN EL HUD ---
 function updateWeaponsHUD() {
     weaponsHud.innerHTML = '';
     Object.keys(player.weapons).forEach(wKey => {
@@ -1983,7 +2343,7 @@ function updateWeaponsHUD() {
     });
 }
 
-// --- STARS BACKGROUND (Parallax i moviment espacial) ---
+// --- STARS BACKGROUND ---
 function initStars() {
     stars = [];
     for(let i=0; i<120; i++) {
@@ -2014,7 +2374,6 @@ function drawBackground(dt) {
     });
     ctx.globalAlpha = 1.0;
 
-    // Dibuixar reixat subtil en perspectiva cyberpunk
     ctx.strokeStyle = 'rgba(6, 182, 212, 0.03)';
     ctx.lineWidth = 1;
     const reixatSize = 120;
@@ -2033,7 +2392,6 @@ function drawBackground(dt) {
 // --- INICIACIÓ I REINICI DEL JOC ---
 
 function startGame() {
-    // Inicialitzar àudio si encara no s'ha iniciat
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
@@ -2043,6 +2401,7 @@ function startGame() {
     currentBoss = null;
     gameTimer = 0; frameCount = 0; totalKills = 0; totalScrap = 0;
     screenShake = 0;
+    keys = {};
     
     hudHp.innerText = player.hp; hudMaxHp.innerText = player.maxHp;
     hudLevel.innerText = player.level; hudTime.innerText = "00:00";
@@ -2054,6 +2413,7 @@ function startGame() {
     startMenu.classList.add('hidden');
     gameOverMenu.classList.add('hidden');
     chestMenu.classList.add('hidden');
+    shopMenu.classList.add('hidden');
     uiLayer.classList.remove('hidden');
     
     updateWeaponsHUD();
@@ -2064,19 +2424,17 @@ function startGame() {
 function backToStartMenu() {
     currentState = STATE.MENU;
     
-    // Netejar entitats perquè no interfereixin en el fons estrellat
     projectiles = []; enemyProjectiles = []; enemies = []; particles = []; xpOrbs = []; scrapMetal = []; floatingTexts = []; slashes = [];
     currentBoss = null;
     
-    // Ocultar tots els menús de joc
     uiLayer.classList.add('hidden');
     gameOverMenu.classList.add('hidden');
     levelUpMenu.classList.add('hidden');
     chestMenu.classList.add('hidden');
+    shopMenu.classList.add('hidden');
     bossWarning.classList.add('hidden');
     bossHpContainer.classList.add('hidden');
     
-    // Mostrar menú d'inici principal
     startMenu.classList.remove('hidden');
 }
 
@@ -2085,7 +2443,7 @@ document.getElementById('btn-restart').onclick = startGame;
 document.getElementById('btn-main-menu').onclick = backToStartMenu;
 document.getElementById('btn-abort').onclick = backToStartMenu;
 
-// --- CONTROLS ADAPTATIUS (RATOLÍ I TÀCTIL SENSE CONFLICTES DE PANTALLA) ---
+// --- CONTROLS ADAPTATIUS ---
 function updatePos(e) {
     if(currentState !== STATE.PLAYING || !player || !player.isMoving) return;
     const rect = canvas.getBoundingClientRect();
@@ -2095,15 +2453,28 @@ function updatePos(e) {
     player.targetY = clientY - rect.top;
 }
 
-canvas.addEventListener('mousedown', (e) => { player && (player.isMoving = true); updatePos(e); });
+canvas.addEventListener('mousedown', (e) => { 
+    if (e.button === 2) {
+        // Clic dret -> Atac Cos a Cos
+        if (currentState === STATE.PLAYING && player) player.tryMelee();
+    } else {
+        // Clic esquerre -> Moviment
+        player && (player.isMoving = true); 
+        updatePos(e); 
+    }
+});
 canvas.addEventListener('mousemove', updatePos);
-window.addEventListener('mouseup', () => player && (player.isMoving = false));
+window.addEventListener('mouseup', (e) => {
+    if (e.button !== 2) player && (player.isMoving = false);
+});
+
+// Evitar que s'obri el menú del navegador al fer clic dret
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 canvas.addEventListener('touchstart', (e) => { e.preventDefault(); player && (player.isMoving = true); updatePos(e); }, {passive: false});
 canvas.addEventListener('touchmove', (e) => { e.preventDefault(); updatePos(e); }, {passive: false});
 window.addEventListener('touchend', () => player && (player.isMoving = false));
 
-// CONTROLS HABILITAT COS A COS MANUAL
 document.getElementById('btn-melee').addEventListener('mousedown', (e) => { 
     e.preventDefault(); e.stopPropagation(); 
     if (player) player.tryMelee(); 
@@ -2114,10 +2485,31 @@ document.getElementById('btn-melee').addEventListener('touchstart', (e) => {
 }, {passive: false});
 
 window.addEventListener('keydown', (e) => {
+    keys[e.code] = true; 
+    
     if (currentState === STATE.PLAYING && player) {
-        if (e.code === 'Space') e.preventDefault(); // Evitar que l'espai faci scroll de la pàgina
-        player.tryMelee();
+        if (e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            openShop();
+            return;
+        }
+        
+        if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault(); 
+        
+        if (e.code === 'Space' || (!e.code.startsWith('Arrow') && !['KeyW','KeyA','KeyS','KeyD'].includes(e.code))) {
+            player.tryMelee();
+        }
+    } 
+    else if (currentState === STATE.SHOP) {
+        if (e.key.toLowerCase() === 'b' || e.key === 'Escape') {
+            e.preventDefault();
+            closeShop();
+        }
     }
+});
+
+window.addEventListener('keyup', (e) => {
+    keys[e.code] = false; 
 });
 
 // --- BUCLE PRINCIPAL DE RENDER (GAMELOOP) ---
@@ -2129,7 +2521,6 @@ function gameLoop(timestamp) {
     if (dt > 0.1 || isNaN(dt)) dt = 0.016; 
     lastTime = timestamp;
 
-    // Aplicar efecte tremolar (Screenshake) a l'escena sencera
     ctx.save();
     if (screenShake > 0) {
         const dx = (Math.random() - 0.5) * screenShake;
@@ -2147,7 +2538,6 @@ function gameLoop(timestamp) {
 
         player.update(dt);
         
-        // Efectes visuals del botó Melee
         const btnMelee = document.getElementById('btn-melee');
         if (player.meleeTimer > 0) {
             btnMelee.style.opacity = '0.4';
@@ -2161,11 +2551,12 @@ function gameLoop(timestamp) {
         
         if (frameCount % 180 === 0) spawnEnemy();
 
-        // Spawn del Cap Alpha o OMEGA
-        if (frameCount > 0 && frameCount % 3600 === 0) { // Cada 60 segons
-            if (frameCount % 10800 === 0) { // Cada 180 segons (3 minuts) Cap OMEGA
+        if (frameCount > 0 && frameCount % 3600 === 0) {
+            if (frameCount % 36000 === 0) { // Cada 10 minuts -> BOSS PLUS
+                spawnPlusBoss();
+            } else if (frameCount % 10800 === 0) { // Cada 3 minuts -> BOSS OMEGA
                 spawnSpecialBoss();
-            } else {
+            } else { // Cada 1 minut -> BOSS ALPHA
                 spawnWaveBoss();
             }
         }
@@ -2183,9 +2574,8 @@ function gameLoop(timestamp) {
 
             if (currentBoss) {
                 if (Math.hypot(p.x - currentBoss.x, p.y - currentBoss.y) < p.radius + currentBoss.radius) {
-                    let dmg = p.damage;
-                    let isCrit = Math.random() < player.critChance;
-                    if (isCrit) dmg *= 2;
+                    let { mult, isCrit } = getCritMultiplier(player.critChance);
+                    let dmg = p.damage * mult;
                     if (player.bossDamageMult > 1.0) dmg *= player.bossDamageMult;
 
                     currentBoss.takeDamage(dmg, isCrit);
@@ -2199,9 +2589,8 @@ function gameLoop(timestamp) {
                 if (p.hitEnemies.includes(e)) continue;
 
                 if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) {
-                    let dmg = p.damage;
-                    let isCrit = Math.random() < player.critChance;
-                    if (isCrit) dmg *= 2;
+                    let { mult, isCrit } = getCritMultiplier(player.critChance);
+                    let dmg = p.damage * mult;
 
                     e.takeDamage(dmg, isCrit);
                     p.hitEnemies.push(e);
