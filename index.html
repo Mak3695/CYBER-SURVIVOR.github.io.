@@ -322,9 +322,9 @@
         <p class="text-gray-400 mb-8 max-w-xl text-center text-sm md:text-base px-6 leading-relaxed">
             Fes servir les fletxes del teclat (o WASD), arrossega el ratolí o el dit per moure la nau.<br><br>
             ⚔️ <span class="text-cyan-400">Armes de Sinergia:</span> Blaster, Escuts, Descàrregues de llamps i Mines Spacials.<br>
-            🚀 <span class="text-yellow-400">Atac Manual:</span> Prem qualsevol tecla o el botó dret del ratolí per fer un tall massiu!<br>
+            🚀 <span class="text-yellow-400">Atac Manual:</span> Prem qualsevol tecla o el botó dret del ratolí per fer un tall massiu i destruir bales!<br>
             🏪 <span class="text-purple-400">Botiga de Chips:</span> Prem "B" o el botó 🛒 per pausar i comprar habilitats amb els teus Chips!<br>
-            👾 <span class="text-red-400">Escalat Extrem:</span> La densitat d'enemics augmenta un 30% cada 20 segons de supervivència!<br>
+            👾 <span class="text-red-400">Escalat Controlat:</span> La densitat d'enemics és més baixa (inclou Tiradors 🔸) i augmenta un 10% cada 60 segons de supervivència!<br>
             ⚠️ <span class="text-rose-500 font-bold">Missions de 10 minuts:</span> Sobreviu fins al minut 10:00 per enfrontar-te al temible BOSS PLUS.
         </p>
         
@@ -367,11 +367,10 @@
     <!-- Menú d'obertura de Cofre de Cap (Reward Screen) -->
     <div id="chest-menu" class="overlay-menu hidden">
         <h2 class="text-4xl text-yellow-400 font-bold mb-2 text-center tracking-widest">COFRE DE RECOMPENSA DE CAP</h2>
-        <p class="text-gray-400 mb-8">S'estan integrant múltiples tecnologies militars recuperades:</p>
+        <p class="text-gray-400 mb-8">Tria NOMÉS UNA de les tecnologies militars recuperades:</p>
         <div id="chest-rewards-container" class="flex flex-wrap justify-center max-w-4xl px-4 mb-8">
             <!-- Recompenses -->
         </div>
-        <button id="btn-chest-claim" class="btn-primary">Equipar Tot</button>
     </div>
 
     <!-- Menú de Game Over -->
@@ -602,6 +601,11 @@ let totalKills = 0;
 let totalScrap = 0;
 let screenShake = 0; 
 
+// --- VARIABLES SÍNCRONES DE BOSS PLUS ---
+let lastBossPlusKilledTime = 0; // Marca el temps exacte (en segons de gameTimer) en què es va eliminar l'últim BOSS PLUS.
+let bossPlusActive = false;    // Indica si el BOSS PLUS està actiu al mapa.
+let bossPlusSpawnedAtThisCycle = false; // Bandera de seguretat per evitar spawns duplicats en el segon de referència.
+
 // --- LLISTES DE CONTROL ---
 let player;
 let projectiles = [];
@@ -666,8 +670,8 @@ const WEAPONS_DB = {
 const SHOP_ITEMS_DB = [
     { id: 'buy_xp', name: 'Mòdul de Síncro (XP)', desc: 'Adquireix de forma immediata un 40% de l\'experiència del nivell actual.', cost: 35, icon: '🧬' },
     { id: 'buy_heal', name: 'Reparació d\'Emergència', desc: 'Reconstrueix completament 40 de Salut de forma immediata.', cost: 25, icon: '🔧' },
-    { id: 'buy_melee_cd', name: 'Sobrecàrrega d\'Atac', desc: 'Redueix permanentment el cooldown de la Fulla Melee.', cost: 50, icon: '⚔️' },
-    { id: 'buy_dmg_boost', name: 'Amplificador Quàntic', desc: 'Increment global de dany d\'armes del 15% de forma infinita.', cost: 65, icon: '💥' },
+    { id: 'buy_melee_cd', name: 'Sobrecàrrega d\'Atac', desc: 'Redueix permanentment le cooldown de la Fulla Melee.', cost: 50, icon: '⚔️' },
+    { id: 'buy_dmg_boost', name: 'Amplificador Quàntic', desc: 'Increment global de dany d\'armes del 15% de forma directa.', cost: 65, icon: '💥' },
     { id: 'buy_chips_boost', name: 'Protocol d\'Extracció', desc: 'Augmenta el valor de recollida de monedes en +1 per sempre.', cost: 45, icon: '🪙' }
 ];
 
@@ -675,7 +679,7 @@ const SHOP_ITEMS_DB = [
 const UPGRADES_POOL = [
     { id: 'weapon_blaster', name: 'Blaster d\'Ió', desc: 'Aconsegueix o millora l\'arma Blaster.', icon: '🔫' },
     { id: 'weapon_shield', name: 'Escut de Plasma', desc: 'Aconsegueix o millora l\'Escut Orbital.', icon: '🛡️' },
-    { id: 'weapon_lightning', name: 'Generador de Llampecs', desc: 'Aconsegueix o millora el canó de Llampecs.', icon: '⚡' },
+    { id: 'weapon_lightning', name: 'Generador de Llampecs', desc: 'Aconsegueix o millora le canó de Llampecs.', icon: '⚡' },
     { id: 'weapon_mines', name: 'Mines Còsmiques', desc: 'Aconsegueix o millora les mines gravitacionals.', icon: '💣' },
     
     { id: 'passive_magnet', name: 'Super Conductors', desc: 'Atreu experiència de molt més lluny.', icon: '🧲' },
@@ -929,7 +933,7 @@ class Player {
     draw() {
         // Escuts orbitals (Ilimitats)
         if (this.weapons.shield > 0) {
-            const numShields = 1 + Math.floor(this.weapons.shield / 2); // SENSE LÍMIT
+            const numShields = 1 + Math.floor(this.weapons.shield / 2); 
             const dmg = WEAPONS_DB.shield.baseDmg * (1 + (this.weapons.shield - 1) * 0.15) * this.shopDamageMult;
             const orbitRadius = 60 + this.weapons.shield * 4;
 
@@ -951,6 +955,14 @@ class Player {
                     if (Math.hypot(enemy.x - sx, enemy.y - sy) < enemy.radius + 8) {
                         enemy.takeDamage(dmg * 0.016); 
                         if (Math.random() < 0.1) spawnParticles(sx, sy, '#c084fc', 2, 0.25);
+                    }
+                });
+
+                // --- BLOQUEIG DE PROJECTILS ENEMICS AMB L'ESCUT ---
+                enemyProjectiles.forEach(ep => {
+                    if (!ep.dead && Math.hypot(ep.x - sx, ep.y - sy) < ep.radius + 8) {
+                        ep.dead = true; // El projectil enemic es destrueix
+                        spawnParticles(ep.x, ep.y, '#c084fc', 4, 0.2); // Partícules al bloquejar
                     }
                 });
             }
@@ -1016,7 +1028,6 @@ class Player {
             screenShake = 12;
         }
 
-        // Shockwave acumula el dany per nivells
         if (this.passives.shockwaveLevel > 0) {
             playSound('explosion');
             const swRadius = 110 + (this.passives.shockwaveLevel * 10);
@@ -1175,6 +1186,24 @@ class EnergySlash {
         
         this.age += dt;
         if (this.age >= this.lifeTime) this.dead = true;
+        
+        // --- BLOQUEIG DE PROJECTILS ENEMICS ---
+        enemyProjectiles.forEach(ep => {
+            if (!ep.dead) {
+                const dist = Math.hypot(ep.x - this.x, ep.y - this.y);
+                if (dist < this.range + ep.radius) {
+                    const angleToProj = Math.atan2(ep.y - this.y, ep.x - this.x);
+                    let diff = angleToProj - this.angle;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    
+                    if (Math.abs(diff) < Math.PI / 1.5) { 
+                        ep.dead = true; // El projectil queda destruït pel tall!
+                        spawnParticles(ep.x, ep.y, '#67e8f9', 4, 0.2); // Espurna blava al bloquejar
+                    }
+                }
+            }
+        });
         
         if (!this.hasDamaged) {
             this.hasDamaged = true;
@@ -1375,7 +1404,7 @@ class LightningBeam {
 class Enemy {
     constructor(x, y, type, hpMult) {
         this.x = x; this.y = y;
-        this.type = type; 
+        this.type = type; // 0: Normal, 1: Ràpid, 2: Tanc, 3: Tirador
         
         const diffConf = DIFFICULTIES[currentDifficulty];
         const dmgMod = diffConf.dmgMod;
@@ -1388,6 +1417,13 @@ class Enemy {
             this.radius = 24; this.speed = 45 + Math.random()*20;
             this.hp = 140 * hpMult; this.damage = 30 * dmgMod;
             this.color = '#c084fc'; this.xp = 6;
+        } else if (type === 3) { 
+            this.radius = 12; this.speed = 85 + Math.random()*20;
+            this.hp = 30 * hpMult; this.damage = 12 * dmgMod;
+            this.color = '#fb923c'; this.xp = 4;
+            this.shootCooldown = 2.2;
+            this.shootTimer = Math.random() * this.shootCooldown; 
+            this.shootDamage = 8 * dmgMod;
         } else { 
             this.radius = 15; this.speed = 75 + Math.random()*30;
             this.hp = 45 * hpMult; this.damage = 15 * dmgMod;
@@ -1412,8 +1448,28 @@ class Enemy {
         
         let moveX = dx / dist;
         let moveY = dy / dist;
-        let sepX = 0, sepY = 0, neighbors = 0;
 
+        if (this.type === 3) {
+            if (dist > 280) {
+                moveX = dx / dist;
+                moveY = dy / dist;
+            } else if (dist < 180) {
+                moveX = -dx / dist;
+                moveY = -dy / dist;
+            } else {
+                moveX = -dy / dist * 0.6;
+                moveY = dx / dist * 0.6;
+            }
+
+            this.shootTimer -= dt;
+            if (this.shootTimer <= 0 && dist < 450) {
+                const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                enemyProjectiles.push(new EnemyProjectile(this.x, this.y, angle, 240, 5, this.shootDamage, '#fb923c'));
+                this.shootTimer = this.shootCooldown;
+            }
+        }
+
+        let sepX = 0, sepY = 0, neighbors = 0;
         enemies.forEach(other => {
             if (other === this) return;
             const odist = Math.hypot(this.x - other.x, this.y - other.y);
@@ -1443,6 +1499,12 @@ class Enemy {
         ctx.beginPath();
         if (this.type === 2) {
             ctx.rect(this.x - this.radius, this.y - this.radius, this.radius*2, this.radius*2);
+        } else if (this.type === 3) {
+            ctx.moveTo(this.x, this.y - this.radius);
+            ctx.lineTo(this.x + this.radius, this.y);
+            ctx.lineTo(this.x, this.y + this.radius);
+            ctx.lineTo(this.x - this.radius, this.y);
+            ctx.closePath();
         } else {
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         }
@@ -1479,9 +1541,9 @@ class Enemy {
         }
 
         const textColor = isCrit ? '#facc15' : '#ffffff';
-        const label = isCrit ? `🔥 CRIT! ${Math.floor(amount)}` : Math.floor(amount);
-        floatingTexts.push(new FloatingText(this.x, this.y - 20, label, textColor));
-        spawnParticles(this.x, this.y, this.frozenTimer > 0 ? '#38bdf8' : this.color, isCrit ? 8 : 4, 0.2);
+        const label = isCrit ? `🔥 SUPER CRIT! ${Math.floor(amount)}` : Math.floor(amount);
+        floatingTexts.push(new FloatingText(this.x, this.y - 50, label, textColor));
+        spawnParticles(this.x, this.y, this.frozenTimer > 0 ? '#38bdf8' : this.color, isCrit ? 15 : 8, 0.3);
 
         if (this.hp <= 0) {
             this.dead = true;
@@ -1812,7 +1874,7 @@ class BossOmega {
     }
 }
 
-// --- CAP PLUS (EXTREM CADA 10 MINUTS) ---
+// --- CAP PLUS (EXTREM CADA 10 MINUTS POST-MORT) ---
 class BossPlus {
     constructor() {
         this.x = width / 2;
@@ -1821,8 +1883,8 @@ class BossPlus {
         
         const diffConf = DIFFICULTIES[currentDifficulty];
         
-        this.speed = 70 * (diffConf.spawnMod >= 1.5 ? 1.3 : 1.0);
-        this.hp = (4000 + (player.level * 600)) * diffConf.hpMod; 
+        this.speed = 70 * (diffConf.spawnMod >= 1.3 ? 1.3 : 1.0);
+        this.hp = (4000 + (player.level * 600)) * diffConf.hpMod * 6; // Vida augmentada 500% (x6)
         this.maxHp = this.hp;
         this.damage = 80 * diffConf.dmgMod;
         this.color = '#facc15'; 
@@ -1951,6 +2013,11 @@ class BossPlus {
             playSound('explosion');
             spawnExplosionEffect(this.x, this.y, 400); 
             screenShake = 50; 
+
+            // Cicle de respawn post-mort: marquem el temps exacte de la seva eliminació
+            lastBossPlusKilledTime = gameTimer;
+            bossPlusActive = false;
+            bossPlusSpawnedAtThisCycle = false;
 
             openBossChest(250); 
         }
@@ -2095,6 +2162,9 @@ function spawnExplosionEffect(x, y, maxRadius) {
 // --- SPAWN DINÀMIC D'ENEMICS ---
 
 function spawnEnemy() {
+    // Bloqueig estricte: No és generen enemics d'eixam si el BOSS PLUS està actiu
+    if (bossPlusActive || currentBoss instanceof BossPlus) return;
+
     const diffConf = DIFFICULTIES[currentDifficulty];
     
     const baseHpMult = 1 + (gameTimer / 60) * 0.75;
@@ -2102,9 +2172,12 @@ function spawnEnemy() {
     
     const baseCount = Math.floor(Math.random() * (1 + (gameTimer/120)*0.3)) + 1;
 
-    const densityMultiplier = Math.pow(1.30, Math.floor(gameTimer / 20));
-    const baseLimit = 5 * densityMultiplier;
-    const count = Math.min(Math.ceil(baseLimit), Math.ceil(baseCount * diffConf.spawnMod * densityMultiplier));
+    // Escalat dinàmic temporal (+10% cada 60 segons)
+    const densityMultiplier = Math.pow(1.10, Math.floor(gameTimer / 60));
+    
+    // Reducció inicial del 60% aplicada
+    const baseLimit = 2 * densityMultiplier; 
+    const count = Math.min(Math.ceil(baseLimit), Math.max(1, Math.ceil(baseCount * diffConf.spawnMod * densityMultiplier * 0.40)));
 
     if (currentBoss) return;
 
@@ -2118,16 +2191,26 @@ function spawnEnemy() {
             y = Math.random() < 0.5 ? -40 : height + 40;
         }
 
+        // Distribució d'enemics que inclou el Tirador (Tipus 3)
         let type = 0;
         const rand = Math.random();
-        if (gameTimer > 30 && rand < 0.35) type = 1; 
-        if (gameTimer > 60 && rand > 0.82) type = 2; 
+        
+        if (gameTimer > 15 && rand < 0.25) {
+            type = 3; // Tiradors des del segon 15
+        } else if (gameTimer > 30 && rand >= 0.25 && rand < 0.60) {
+            type = 1; // Ràpids des del segon 30
+        } else if (gameTimer > 60 && rand > 0.82) {
+            type = 2; // Tancs des de minut 1
+        }
 
         enemies.push(new Enemy(x, y, type, hpMult));
     }
 }
 
 function spawnWaveBoss() {
+    // No és genera cap Boss Alpha si el BOSS PLUS està actiu
+    if (bossPlusActive || currentBoss instanceof BossPlus) return;
+
     playSound('warning');
     bossWarning.innerText = "🚨 ALERTA DE CAP ENTRANT 🚨";
     bossWarning.style.borderColor = "#f87171";
@@ -2135,6 +2218,7 @@ function spawnWaveBoss() {
     bossWarning.classList.remove('hidden');
     
     setTimeout(() => {
+        if (bossPlusActive || currentBoss instanceof BossPlus) return; // Comprovació de seguretat addicional
         bossWarning.classList.add('hidden');
         currentBoss = new BossAlpha();
         
@@ -2147,6 +2231,9 @@ function spawnWaveBoss() {
 }
 
 function spawnSpecialBoss() {
+    // No és genera cap Boss Omega si el BOSS PLUS està actiu
+    if (bossPlusActive || currentBoss instanceof BossPlus) return;
+
     playSound('warning');
     bossWarning.innerText = "⚠️ PERILL EXTREM: OMEGA ENTRANT ⚠️";
     bossWarning.style.borderColor = "#a855f7";
@@ -2154,6 +2241,7 @@ function spawnSpecialBoss() {
     bossWarning.classList.remove('hidden');
     
     setTimeout(() => {
+        if (bossPlusActive || currentBoss instanceof BossPlus) return;
         bossWarning.classList.add('hidden');
         currentBoss = new BossOmega();
         
@@ -2166,12 +2254,16 @@ function spawnSpecialBoss() {
 }
 
 function spawnPlusBoss() {
+    bossPlusActive = true;
+    bossPlusSpawnedAtThisCycle = true;
+
     playSound('warning');
     bossWarning.innerText = "☠️ ADVERTIMENT CRÍTIC: DESTRUCTOR PLUS ☠️";
     bossWarning.style.borderColor = "#facc15";
     bossWarning.style.background = "rgba(185, 28, 28, 0.95)";
     bossWarning.classList.remove('hidden');
 
+    // Netegem la pantalla completament d'enemics comuns i els seus trets a l'acte per assegurar el 1vs1 net!
     enemies = [];
     enemyProjectiles = [];
 
@@ -2205,25 +2297,35 @@ function openBossChest(scrapReward) {
     rewardUpgrades.forEach(upg => {
         const item = document.createElement('div');
         item.className = 'upgrade-card border-yellow-400 shadow-yellow-500/20';
+        
+        let currentLvl = 0;
+        if (upg.id.startsWith('weapon_')) {
+            const wKey = upg.id.replace('weapon_', '');
+            currentLvl = player.weapons[wKey];
+        }
+        const modeText = currentLvl > 0 ? `Millorar a Nivell ${currentLvl + 1}` : 'NOU';
+
         item.innerHTML = `
             <div class="text-4xl mb-3 text-yellow-400">🎁</div>
             <h3 class="text-lg font-bold text-yellow-300 mb-1">${upg.name}</h3>
+            <p class="text-xs text-rose-400 font-bold mb-2 uppercase tracking-wider">${modeText}</p>
             <p class="text-xs text-gray-400">${upg.desc}</p>
         `;
-        player.applyUpgrade(upg.id); 
+        
+        item.onclick = () => {
+            player.applyUpgrade(upg.id); 
+            chestMenu.classList.add('hidden');
+            uiLayer.classList.remove('hidden');
+            currentState = STATE.PLAYING;
+            lastTime = performance.now();
+        };
+        
         chestRewardsContainer.appendChild(item);
     });
 
     totalScrap += scrapReward;
     hudScrap.innerText = totalScrap;
 }
-
-document.getElementById('btn-chest-claim').onclick = () => {
-    chestMenu.classList.add('hidden');
-    uiLayer.classList.remove('hidden');
-    currentState = STATE.PLAYING;
-    lastTime = performance.now();
-};
 
 // --- INTERFÍCIE I COMPRES DE LA BOTIGA INTERACTIVA ---
 
@@ -2402,6 +2504,11 @@ function startGame() {
     gameTimer = 0; frameCount = 0; totalKills = 0; totalScrap = 0;
     screenShake = 0;
     keys = {};
+
+    // Reiniciar completament el cicle de BOSS PLUS
+    lastBossPlusKilledTime = 0;
+    bossPlusActive = false;
+    bossPlusSpawnedAtThisCycle = false;
     
     hudHp.innerText = player.hp; hudMaxHp.innerText = player.maxHp;
     hudLevel.innerText = player.level; hudTime.innerText = "00:00";
@@ -2426,6 +2533,8 @@ function backToStartMenu() {
     
     projectiles = []; enemyProjectiles = []; enemies = []; particles = []; xpOrbs = []; scrapMetal = []; floatingTexts = []; slashes = [];
     currentBoss = null;
+    bossPlusActive = false;
+    bossPlusSpawnedAtThisCycle = false;
     
     uiLayer.classList.add('hidden');
     gameOverMenu.classList.add('hidden');
@@ -2455,10 +2564,8 @@ function updatePos(e) {
 
 canvas.addEventListener('mousedown', (e) => { 
     if (e.button === 2) {
-        // Clic dret -> Atac Cos a Cos
         if (currentState === STATE.PLAYING && player) player.tryMelee();
     } else {
-        // Clic esquerre -> Moviment
         player && (player.isMoving = true); 
         updatePos(e); 
     }
@@ -2468,7 +2575,6 @@ window.addEventListener('mouseup', (e) => {
     if (e.button !== 2) player && (player.isMoving = false);
 });
 
-// Evitar que s'obri el menú del navegador al fer clic dret
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 canvas.addEventListener('touchstart', (e) => { e.preventDefault(); player && (player.isMoving = true); updatePos(e); }, {passive: false});
@@ -2549,14 +2655,32 @@ function gameLoop(timestamp) {
             btnMelee.style.borderColor = '#fef08a';
         }
         
-        if (frameCount % 180 === 0) spawnEnemy();
+        // --- CICLE DE GENERACIÓ DINÀMICA DEL BOSS PLUS ---
+        let timeTriggerMet = false;
+        if (lastBossPlusKilledTime === 0) {
+            if (gameTimer >= 600) {
+                timeTriggerMet = true;
+            }
+        } else {
+            if (gameTimer - lastBossPlusKilledTime >= 600) {
+                timeTriggerMet = true;
+            }
+        }
 
-        if (frameCount > 0 && frameCount % 3600 === 0) {
-            if (frameCount % 36000 === 0) { // Cada 10 minuts -> BOSS PLUS
+        if (timeTriggerMet && !bossPlusActive && !bossPlusSpawnedAtThisCycle) {
+            spawnPlusBoss();
+        }
+
+        if (frameCount % 180 === 0 && !bossPlusActive) {
+            spawnEnemy();
+        }
+
+        if (frameCount > 0 && frameCount % 3600 === 0 && !bossPlusActive) {
+            if (frameCount % 36000 === 0) { 
                 spawnPlusBoss();
-            } else if (frameCount % 10800 === 0) { // Cada 3 minuts -> BOSS OMEGA
+            } else if (frameCount % 10800 === 0) { 
                 spawnSpecialBoss();
-            } else { // Cada 1 minut -> BOSS ALPHA
+            } else { 
                 spawnWaveBoss();
             }
         }
